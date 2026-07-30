@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gameon-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gameon
+      POSTGRES_PASSWORD: gameon
+      POSTGRES_DB: gameon
+    ports:
+      - "5433:5432"
+    volumes:
+      - gameon-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gameon -d gameon"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  gameon-pgdata:

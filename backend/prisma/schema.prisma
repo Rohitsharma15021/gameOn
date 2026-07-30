@@ -1,0 +1,334 @@
+// gameOn — data model
+// Money is stored as integers in the smallest currency unit (paise for INR).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PLAYER
+  VENUE_OWNER
+  ADMIN
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  PRO
+}
+
+enum SlotStatus {
+  AVAILABLE
+  HELD
+  BOOKED
+  BLOCKED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum SplitStatus {
+  PENDING
+  PAID
+  DECLINED
+}
+
+enum GameStatus {
+  OPEN
+  FULL
+  CANCELLED
+  COMPLETED
+}
+
+enum GamePlayerStatus {
+  REQUESTED
+  JOINED
+  LEFT
+  REMOVED
+}
+
+enum ReviewTargetType {
+  VENUE
+  PLAYER
+}
+
+model User {
+  id               String     @id @default(uuid())
+  name             String
+  phone            String     @unique
+  email            String?    @unique
+  passwordHash     String?
+  avatarUrl        String?
+  bio              String?
+  city             String?
+  latitude         Float?
+  longitude        Float?
+  sportPreferences String[]   @default([])
+  skillLevel       SkillLevel @default(BEGINNER)
+  ratingAvg        Float      @default(0)
+  ratingCount      Int        @default(0)
+  role             Role       @default(PLAYER)
+  referralCode     String     @unique
+  referredById     String?
+  rewardPoints     Int        @default(0)
+  onboardedAt      DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  referredBy    User?          @relation("Referrals", fields: [referredById], references: [id])
+  referrals     User[]         @relation("Referrals")
+  venues        Venue[]
+  bookings      Booking[]
+  splits        BookingSplit[]
+  hostedGames   Game[]         @relation("HostedGames")
+  gamePlayers   GamePlayer[]
+  messages      Message[]
+  reviews       Review[]
+  notifications Notification[]
+  devices       Device[]
+
+  @@index([city])
+  @@index([latitude, longitude])
+}
+
+model Device {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  platform  String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OtpCode {
+  id         String    @id @default(uuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
+}
+
+model Venue {
+  id            String   @id @default(uuid())
+  ownerId       String
+  name          String
+  description   String?
+  address       String
+  city          String
+  latitude      Float
+  longitude     Float
+  sportsOffered String[] @default([])
+  amenities     String[] @default([])
+  images        String[] @default([])
+  // Minutes from midnight, venue-local time.
+  openMinute    Int      @default(360)
+  closeMinute   Int      @default(1380)
+  phone         String?
+  ratingAvg     Float    @default(0)
+  ratingCount   Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  owner  User    @relation(fields: [ownerId], references: [id])
+  courts Court[]
+  games  Game[]
+
+  @@index([city])
+  @@index([latitude, longitude])
+}
+
+model Court {
+  id           String   @id @default(uuid())
+  venueId      String
+  name         String
+  sportType    String
+  pricePerHour Int
+  // Booking granularity in minutes.
+  slotMinutes  Int      @default(60)
+  surface      String?
+  isIndoor     Boolean  @default(false)
+  capacity     Int      @default(10)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  venue Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  slots Slot[]
+  games Game[]
+
+  @@index([venueId, sportType])
+}
+
+model Slot {
+  id        String     @id @default(uuid())
+  courtId   String
+  date      DateTime   @db.Date
+  startsAt  DateTime
+  endsAt    DateTime
+  price     Int
+  status    SlotStatus @default(AVAILABLE)
+  holdUntil DateTime?
+  createdAt DateTime   @default(now())
+
+  court    Court     @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([courtId, startsAt])
+  @@index([courtId, date])
+  @@index([date, status])
+}
+
+model Booking {
+  id              String        @id @default(uuid())
+  userId          String
+  slotId          String
+  amount          Int
+  platformFee     Int           @default(0)
+  currency        String        @default("INR")
+  status          BookingStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentProvider String?
+  paymentOrderId  String?
+  paymentRef      String?
+  notes           String?
+  cancelledAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user   User           @relation(fields: [userId], references: [id])
+  slot   Slot           @relation(fields: [slotId], references: [id])
+  splits BookingSplit[]
+  game   Game?
+
+  @@index([userId, createdAt])
+  @@index([paymentOrderId])
+}
+
+model BookingSplit {
+  id        String      @id @default(uuid())
+  bookingId String
+  userId    String?
+  phone     String?
+  name      String?
+  amount    Int
+  status    SplitStatus @default(PENDING)
+  paidAt    DateTime?
+  createdAt DateTime    @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@index([bookingId])
+}
+
+model Game {
+  id            String     @id @default(uuid())
+  hostId        String
+  venueId       String?
+  courtId       String?
+  bookingId     String?    @unique
+  title          String?
+  sport         String
+  skillLevel    SkillLevel @default(BEGINNER)
+  maxPlayers    Int
+  costPerPlayer Int        @default(0)
+  startsAt      DateTime
+  endsAt        DateTime
+  description   String?
+  status        GameStatus @default(OPEN)
+  autoApprove   Boolean    @default(true)
+  latitude      Float?
+  longitude     Float?
+  locationName  String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  host     User         @relation("HostedGames", fields: [hostId], references: [id])
+  venue    Venue?       @relation(fields: [venueId], references: [id])
+  court    Court?       @relation(fields: [courtId], references: [id])
+  booking  Booking?     @relation(fields: [bookingId], references: [id])
+  players  GamePlayer[]
+  messages Message[]
+
+  @@index([sport, startsAt])
+  @@index([status, startsAt])
+  @@index([latitude, longitude])
+}
+
+model GamePlayer {
+  id       String           @id @default(uuid())
+  gameId   String
+  userId   String
+  status   GamePlayerStatus @default(JOINED)
+  joinedAt DateTime         @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, userId])
+  @@index([userId, status])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  gameId    String
+  senderId  String
+  text      String
+  createdAt DateTime @default(now())
+
+  game   Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, createdAt])
+}
+
+model Review {
+  id         String           @id @default(uuid())
+  authorId   String
+  targetType ReviewTargetType
+  targetId   String
+  rating     Int
+  comment    String?
+  createdAt  DateTime         @default(now())
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([authorId, targetType, targetId])
+  @@index([targetType, targetId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
