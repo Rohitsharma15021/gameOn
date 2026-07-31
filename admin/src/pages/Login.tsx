@@ -48,8 +48,8 @@ export default function Login() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9f9f7' }}>
-      <Card style={{ width: 380 }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9f9f7', padding: 16, boxSizing: 'border-box' }}>
+      <Card style={{ width: '100%', maxWidth: 380 }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ fontSize: 32 }}>🏆</div>
           <h1 style={{ fontSize: 20, margin: '8px 0 0' }}>gameOn Venue Console</h1>

@@ -7,17 +7,22 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert } from '../../src/lib/alert';
 import { LoadingView } from '../../src/components/LoadingView';
 import { RatingBadge } from '../../src/components/RatingBadge';
 import { Avatar } from '../../src/components/Avatar';
+import { DateField } from '../../src/components/DateField';
 import { colors, radius, spacing, typography } from '../../src/theme/theme';
 import { fetchVenue, fetchAvailability } from '../../src/api/venues';
+import { submitReview } from '../../src/api/reviews';
 import { distanceLabel, money } from '../../src/utils/format';
 import type { Slot } from '../../src/types/api';
 
@@ -31,11 +36,17 @@ function nextDays(n: number) {
 
 export default function VenueDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [dateIdx, setDateIdx] = useState(0);
+  const { width: screenWidth } = useWindowDimensions();
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
   const [courtId, setCourtId] = useState<string | undefined>(undefined);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const qc = useQueryClient();
 
   const days = useMemo(() => nextDays(7), []);
-  const dateStr = days[dateIdx].toISOString().slice(0, 10);
+  const dateStr = selectedDate.toISOString().slice(0, 10);
 
   const venueQuery = useQuery({ queryKey: ['venue', id], queryFn: () => fetchVenue(id) });
   const availabilityQuery = useQuery({
@@ -49,6 +60,25 @@ export default function VenueDetail() {
   const { venue, reviews } = venueQuery.data;
   const courts = availabilityQuery.data?.courts ?? [];
   const activeCourt = courts.find((c) => c.court.id === courtId) ?? courts[0];
+
+  const rateVenue = async () => {
+    if (rating === 0) {
+      Alert.alert('Pick a star rating first');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await submitReview({ targetType: 'VENUE', targetId: id, rating, comment: comment || undefined });
+      setComment('');
+      setRating(0);
+      qc.invalidateQueries({ queryKey: ['venue', id] });
+      Alert.alert('Thanks for the feedback!');
+    } catch (err) {
+      Alert.alert('Could not submit review', (err as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const selectSlot = (slot: Slot) => {
     if (slot.status !== 'AVAILABLE') return;
@@ -75,7 +105,7 @@ export default function VenueDetail() {
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             keyExtractor={(uri, i) => uri + i}
-            renderItem={({ item }) => <Image source={{ uri: item }} style={styles.image} />}
+            renderItem={({ item }) => <Image source={{ uri: item }} style={[styles.image, { width: screenWidth }]} />}
           />
           <SafeAreaView style={styles.backWrap} edges={['top']}>
             <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -112,7 +142,13 @@ export default function VenueDetail() {
             ))}
           </View>
 
-          <Text style={styles.sectionTitle}>Book a slot</Text>
+          <View style={styles.bookHeaderRow}>
+            <Text style={styles.sectionTitle}>Book a slot</Text>
+            <Pressable onPress={() => setShowCalendar(true)} style={styles.calendarBtn}>
+              <Ionicons name="calendar-outline" size={16} color={colors.primaryDark} />
+              <Text style={styles.calendarBtnText}>Pick a date</Text>
+            </Pressable>
+          </View>
           <FlatList
             data={days}
             horizontal
@@ -120,9 +156,9 @@ export default function VenueDetail() {
             keyExtractor={(d) => d.toISOString()}
             style={styles.dayRow}
             renderItem={({ item, index }) => {
-              const selected = index === dateIdx;
+              const selected = item.toDateString() === selectedDate.toDateString();
               return (
-                <Pressable onPress={() => setDateIdx(index)} style={[styles.dayPill, selected && styles.dayPillActive]}>
+                <Pressable onPress={() => setSelectedDate(item)} style={[styles.dayPill, selected && styles.dayPillActive]}>
                   <Text style={[styles.dayLabel, selected && styles.dayLabelActive]}>
                     {index === 0 ? 'Today' : item.toLocaleDateString('en-IN', { weekday: 'short' })}
                   </Text>
@@ -131,26 +167,29 @@ export default function VenueDetail() {
               );
             }}
           />
+          <DateField
+            visible={showCalendar}
+            value={selectedDate}
+            minimumDate={new Date()}
+            onChange={setSelectedDate}
+            onRequestClose={() => setShowCalendar(false)}
+          />
 
           {courts.length > 1 ? (
-            <FlatList
-              data={courts}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(c) => c.court.id}
-              style={styles.courtRow}
-              renderItem={({ item }) => {
-                const selected = activeCourt?.court.id === item.court.id;
+            <View style={styles.courtGrid}>
+              {courts.map((c) => {
+                const selected = activeCourt?.court.id === c.court.id;
                 return (
                   <Pressable
-                    onPress={() => setCourtId(item.court.id)}
+                    key={c.court.id}
+                    onPress={() => setCourtId(c.court.id)}
                     style={[styles.courtPill, selected && styles.courtPillActive]}
                   >
-                    <Text style={[styles.courtText, selected && styles.courtTextActive]}>{item.court.name}</Text>
+                    <Text style={[styles.courtText, selected && styles.courtTextActive]}>{c.court.name}</Text>
                   </Pressable>
                 );
-              }}
-            />
+              })}
+            </View>
           ) : null}
 
           {availabilityQuery.isLoading ? (
@@ -178,6 +217,27 @@ export default function VenueDetail() {
             <Text style={styles.noCourts}>No courts available for this sport</Text>
           )}
 
+          <View style={styles.reviewFormCard}>
+            <Text style={styles.sectionTitle}>Rate this venue</Text>
+            <View style={styles.starRow}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Pressable key={n} onPress={() => setRating(n)}>
+                  <Ionicons name={n <= rating ? 'star' : 'star-outline'} size={28} color={colors.star} />
+                </Pressable>
+              ))}
+            </View>
+            <TextInput
+              value={comment}
+              onChangeText={setComment}
+              placeholder="Leave a comment (optional)"
+              style={styles.commentInput}
+              multiline
+            />
+            <Pressable onPress={rateVenue} disabled={submitting} style={styles.submitReview}>
+              <Text style={styles.submitReviewText}>{submitting ? 'Submitting...' : 'Submit review'}</Text>
+            </Pressable>
+          </View>
+
           <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
           {reviews.length === 0 ? (
             <Text style={styles.noReviews}>No reviews yet — be the first to play here!</Text>
@@ -204,7 +264,7 @@ export default function VenueDetail() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   imageWrap: { height: 240, backgroundColor: colors.bgAlt },
-  image: { width: 400, height: 240 },
+  image: { height: 240 },
   backWrap: { position: 'absolute', top: 0, left: 0 },
   backBtn: { margin: spacing.md, backgroundColor: colors.overlay, borderRadius: radius.full, padding: spacing.sm },
   content: { padding: spacing.lg },
@@ -218,14 +278,17 @@ const styles = StyleSheet.create({
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: { backgroundColor: colors.bgAlt, borderRadius: radius.full, paddingVertical: 6, paddingHorizontal: spacing.md },
   chipText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
+  bookHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  calendarBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: spacing.sm, borderRadius: radius.full, backgroundColor: colors.primaryLight },
+  calendarBtnText: { fontSize: 12, fontWeight: '700', color: colors.primaryDark },
   dayRow: { marginTop: spacing.xs },
   dayPill: { alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, backgroundColor: colors.bgAlt, marginRight: spacing.sm, minWidth: 56 },
   dayPillActive: { backgroundColor: colors.primary },
   dayLabel: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
   dayNum: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: 2 },
   dayLabelActive: { color: '#fff' },
-  courtRow: { marginTop: spacing.md },
-  courtPill: { paddingVertical: 8, paddingHorizontal: spacing.md, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, marginRight: spacing.sm },
+  courtGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
+  courtPill: { paddingVertical: 8, paddingHorizontal: spacing.md, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border },
   courtPillActive: { backgroundColor: colors.primaryLight, borderColor: colors.primary },
   courtText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   courtTextActive: { color: colors.primaryDark },
@@ -237,6 +300,11 @@ const styles = StyleSheet.create({
   slotPrice: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   noCourts: { ...typography.body, color: colors.textMuted, marginTop: spacing.md },
   noReviews: { ...typography.body, color: colors.textMuted },
+  reviewFormCard: { backgroundColor: colors.bgAlt, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.xl },
+  starRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  commentInput: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.sm, marginTop: spacing.md, minHeight: 50, backgroundColor: colors.surface, color: colors.text },
+  submitReview: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 10, alignItems: 'center', marginTop: spacing.md },
+  submitReviewText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   reviewCard: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   reviewBody: { flex: 1 },
   reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

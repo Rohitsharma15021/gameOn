@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/components/Screen';
@@ -16,10 +17,11 @@ import { useAuthStore } from '../../src/store/auth.store';
 type Sort = 'distance' | 'rating' | 'price';
 
 export default function Search() {
+  const { sport: sportParam } = useLocalSearchParams<{ sport?: string }>();
   const user = useAuthStore((s) => s.user);
   const { coords } = useLocation();
   const [query, setQuery] = useState('');
-  const [sport, setSport] = useState<string | undefined>();
+  const [sport, setSport] = useState<string | undefined>(sportParam);
   const [sort, setSort] = useState<Sort>('distance');
   const [showMap, setShowMap] = useState(false);
 

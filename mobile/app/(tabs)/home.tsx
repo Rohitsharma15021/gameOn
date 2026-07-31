@@ -7,13 +7,17 @@ import { VenueCard } from '../../src/components/VenueCard';
 import { GameCard } from '../../src/components/GameCard';
 import { SportChip } from '../../src/components/SportChip';
 import { EmptyState } from '../../src/components/EmptyState';
-import { colors, spacing, typography, SPORTS } from '../../src/theme/theme';
+import { colors, radius, spacing, typography, SPORTS } from '../../src/theme/theme';
 import { useLocation } from '../../src/hooks/useLocation';
 import { searchVenues } from '../../src/api/venues';
-import { searchGames } from '../../src/api/games';
+import { searchGames, fetchMyGames } from '../../src/api/games';
+import { fetchBookings } from '../../src/api/bookings';
 import { useAuthStore } from '../../src/store/auth.store';
 import { fetchNotifications } from '../../src/api/notifications';
 import { Ionicons } from '@expo/vector-icons';
+import { dayLabel, timeRange } from '../../src/utils/format';
+
+type Activity = { key: string; startsAt: string; title: string; subtitle: string; onPress: () => void };
 
 export default function Home() {
   const user = useAuthStore((s) => s.user);
@@ -51,10 +55,34 @@ export default function Home() {
     refetchInterval: 60_000,
   });
 
+  const upcomingBookingsQuery = useQuery({ queryKey: ['home-upcoming-bookings'], queryFn: () => fetchBookings('upcoming') });
+  const myGamesQuery = useQuery({ queryKey: ['home-my-games'], queryFn: fetchMyGames });
+
+  const activities: Activity[] = [
+    ...(upcomingBookingsQuery.data ?? []).map((b) => ({
+      key: `booking-${b.id}`,
+      startsAt: b.slot.startsAt,
+      title: b.slot.court.venue.name,
+      subtitle: `${dayLabel(b.slot.startsAt)} · ${timeRange(b.slot.startsAt, b.slot.endsAt)}`,
+      onPress: () => router.push('/(tabs)/bookings'),
+    })),
+    ...(myGamesQuery.data?.upcoming ?? []).map((g) => ({
+      key: `game-${g.id}`,
+      startsAt: g.startsAt,
+      title: g.title || g.sport,
+      subtitle: `${dayLabel(g.startsAt)} · ${timeRange(g.startsAt, g.endsAt)}`,
+      onPress: () => router.push(`/game/${g.id}`),
+    })),
+  ]
+    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
+    .slice(0, 3);
+
   const refreshing = venuesQuery.isFetching || gamesQuery.isFetching;
   const onRefresh = () => {
     venuesQuery.refetch();
     gamesQuery.refetch();
+    upcomingBookingsQuery.refetch();
+    myGamesQuery.refetch();
   };
 
   return (
@@ -73,6 +101,22 @@ export default function Home() {
           ) : null}
         </Pressable>
       </View>
+
+      {activities.length > 0 && (
+        <>
+          <Text style={styles.activitiesTitle}>Upcoming activities</Text>
+          {activities.map((a) => (
+            <Pressable key={a.key} onPress={a.onPress} style={styles.activityCard}>
+              <View style={styles.activityDot} />
+              <View style={styles.activityBody}>
+                <Text style={styles.activityTitle}>{a.title}</Text>
+                <Text style={styles.activitySubtitle}>{a.subtitle}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+            </Pressable>
+          ))}
+        </>
+      )}
 
       <FlatList
         data={SPORTS}
@@ -134,6 +178,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   dotText: { color: '#fff', fontSize: 9, fontWeight: '700' },
+  activitiesTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  activityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  activityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
+  activityBody: { flex: 1 },
+  activityTitle: { ...typography.bodyMedium, color: colors.text },
+  activitySubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   chipRow: { marginBottom: spacing.lg },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, marginTop: spacing.sm },
   sectionTitle: { ...typography.h3, color: colors.text },

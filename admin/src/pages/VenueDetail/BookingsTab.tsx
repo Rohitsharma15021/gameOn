@@ -21,7 +21,8 @@ export default function BookingsTab({ venue }: { venue: Venue }) {
   }
 
   return (
-    <Card style={{ padding: 0, overflow: 'hidden' }}>
+    <Card style={{ padding: 0, overflow: 'visible' }}>
+      <div className="table-scroll">
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ background: '#f9f9f7', textAlign: 'left' }}>
@@ -54,6 +55,7 @@ export default function BookingsTab({ venue }: { venue: Venue }) {
           ))}
         </tbody>
       </table>
+      </div>
     </Card>
   );
 }

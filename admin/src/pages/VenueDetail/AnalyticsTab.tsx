@@ -99,7 +99,7 @@ export default function AnalyticsTab({ venue }: { venue: Venue }) {
             )}
           </Card>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+          <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
             <Card>
               <h3 style={{ margin: '0 0 16px', fontSize: 15 }}>Revenue by court</h3>
               {data.revenueByCourt.length === 0 ? (

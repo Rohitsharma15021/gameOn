@@ -54,7 +54,7 @@ export default function InfoTab({ venue }: { venue: Venue }) {
 
   return (
     <Card>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <Field label="Venue name">
           <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </Field>
@@ -79,7 +79,7 @@ export default function InfoTab({ venue }: { venue: Venue }) {
         <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
       </Field>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <Field label="Sports offered (comma separated)">
           <Input value={form.sportsOffered} onChange={(e) => setForm({ ...form, sportsOffered: e.target.value })} />
         </Field>

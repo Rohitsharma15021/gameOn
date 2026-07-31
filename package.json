@@ -5,13 +5,15 @@
   "description": "gameOn — sports venue booking & player-matching platform",
   "workspaces": [
     "backend",
-    "admin"
+    "admin",
+    "web"
   ],
   "scripts": {
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "backend": "npm run dev --workspace backend",
     "admin": "npm run dev --workspace admin",
+    "web": "npm run dev --workspace web",
     "mobile": "npm --prefix mobile run start",
     "setup": "npm install && npm --prefix mobile install && npm run db:up && npm run db:reset --workspace backend"
   },

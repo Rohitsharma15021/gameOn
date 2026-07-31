@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" width="900" height="460" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#E85A1B" />
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8A9990" />
+    </marker>
+  </defs>
+
+  <!-- card background -->
+  <rect x="0" y="0" width="900" height="460" rx="14" fill="#F6F3EA" />
+  <rect x="0.5" y="0.5" width="899" height="459" rx="13.5" fill="none" stroke="#14201A" stroke-opacity="0.12" />
+
+  <!-- top row: mobile / admin / web -->
+  <g>
+    <rect x="40" y="46" width="230" height="86" rx="10" fill="#FFFFFF" stroke="#14201A" stroke-opacity="0.16" />
+    <text x="155" y="80" text-anchor="middle" font-size="17" font-weight="800" fill="#E85A1B" font-family="ui-monospace, SFMono-Regular, Consolas, monospace">mobile</text>
+    <text x="155" y="102" text-anchor="middle" font-size="13" fill="#55645B">Players</text>
+    <text x="155" y="120" text-anchor="middle" font-size="11.5" fill="#8A9990">Expo / React Native</text>
+  </g>
+
+  <g>
+    <rect x="335" y="46" width="230" height="86" rx="10" fill="#FFFFFF" stroke="#14201A" stroke-opacity="0.16" />
+    <text x="450" y="80" text-anchor="middle" font-size="17" font-weight="800" fill="#E85A1B" font-family="ui-monospace, SFMono-Regular, Consolas, monospace">admin</text>
+    <text x="450" y="102" text-anchor="middle" font-size="13" fill="#55645B">Venue owners &amp; admins</text>
+    <text x="450" y="120" text-anchor="middle" font-size="11.5" fill="#8A9990">React + Vite</text>
+  </g>
+
+  <g>
+    <rect x="630" y="46" width="230" height="86" rx="10" fill="#FFFFFF" stroke="#14201A" stroke-opacity="0.16" />
+    <text x="745" y="80" text-anchor="middle" font-size="17" font-weight="800" fill="#E85A1B" font-family="ui-monospace, SFMono-Regular, Consolas, monospace">web</text>
+    <text x="745" y="102" text-anchor="middle" font-size="13" fill="#55645B">Public marketing site</text>
+    <text x="745" y="120" text-anchor="middle" font-size="11.5" fill="#8A9990">React + Vite</text>
+  </g>
+
+  <!-- converging lines from each app down to backend -->
+  <path d="M155,132 L155,190 L450,190 L450,208" fill="none" stroke="#8A9990" stroke-width="1.6" marker-end="url(#arrow-muted)" />
+  <path d="M450,132 L450,208" fill="none" stroke="#8A9990" stroke-width="1.6" marker-end="url(#arrow-muted)" />
+  <path d="M745,132 L745,190 L450,190 L450,208" fill="none" stroke="#8A9990" stroke-width="1.6" marker-end="url(#arrow-muted)" />
+
+  <!-- REST + Socket.IO label -->
+  <rect x="365" y="150" width="170" height="26" rx="13" fill="#FFFFFF" stroke="#14201A" stroke-opacity="0.14" />
+  <text x="450" y="167" text-anchor="middle" font-size="11.5" fill="#55645B" font-family="ui-monospace, SFMono-Regular, Consolas, monospace">REST + Socket.IO</text>
+
+  <!-- backend -->
+  <g>
+    <rect x="330" y="212" width="240" height="86" rx="10" fill="#FFFFFF" stroke="#E85A1B" stroke-width="1.6" />
+    <text x="450" y="248" text-anchor="middle" font-size="18" font-weight="800" fill="#E85A1B" font-family="ui-monospace, SFMono-Regular, Consolas, monospace">backend</text>
+    <text x="450" y="270" text-anchor="middle" font-size="13" fill="#55645B">Express API + real-time chat</text>
+    <text x="450" y="288" text-anchor="middle" font-size="11.5" fill="#8A9990">Prisma ORM · Socket.IO · JWT</text>
+  </g>
+
+  <!-- backend -> postgres -->
+  <path d="M450,298 L450,340" fill="none" stroke="#2E6F4E" stroke-width="1.8" marker-end="url(#arrow)" />
+
+  <!-- postgres -->
+  <g>
+    <rect x="330" y="344" width="240" height="80" rx="10" fill="#FFFFFF" stroke="#2E6F4E" stroke-width="1.6" />
+    <text x="450" y="378" text-anchor="middle" font-size="17" font-weight="800" fill="#2E6F4E" font-family="ui-monospace, SFMono-Regular, Consolas, monospace">PostgreSQL</text>
+    <text x="450" y="400" text-anchor="middle" font-size="12.5" fill="#55645B">One database, one source of truth</text>
+  </g>
+
+  <!-- caption -->
+  <text x="450" y="446" text-anchor="middle" font-size="12" fill="#8A9990">All three front ends call the same API; mobile also keeps a live chat connection open per game.</text>
+</svg>

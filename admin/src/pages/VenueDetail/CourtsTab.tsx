@@ -47,7 +47,7 @@ export default function CourtsTab({ venue }: { venue: Venue }) {
 
       {showForm && (
         <Card style={{ marginBottom: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div className="court-fields-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
             <Field label="Name">
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Court 1" />
             </Field>
